@@ -1,4 +1,4 @@
-# DressFlow System
+# DressCloud System
 > **Infraestructura para el Desarrollo Continuo | Proyecto Final**
 
 ![Build Status](https://img.shields.io/github/actions/workflow/status/TU_USUARIO/TU_REPO/deploy.yml?branch=main&style=for-the-badge)
@@ -6,7 +6,7 @@
 ![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?style=for-the-badge&logo=docker&logoColor=white)
 
 ##  Descripción
-DressFlow es una plataforma web *serverless* diseñada para la gestión de inventario y ventas en boutiques de vestidos. El proyecto se centra en la implementación de un pipeline de **CI/CD** robusto, utilizando GitHub Actions para automatizar el testing y el despliegue en la red global de Cloudflare.
+DressCloud es una plataforma web *serverless* diseñada para la gestión de inventario y ventas en boutiques de vestidos. El proyecto se centra en la implementación de un pipeline de **CI/CD** robusto, utilizando GitHub Actions para automatizar el testing y el despliegue en la red global de Cloudflare.
 
 ##  Stack Tecnológico
 * **Framework:** Next.js / React
