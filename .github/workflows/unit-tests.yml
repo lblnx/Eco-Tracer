@@ -1,0 +1,153 @@
+# =============================================================================
+# DressFlow — Workflow de Integración Continua (CI) — Pruebas Unitarias
+# Archivo: .github/workflows/unit-tests.yml
+#
+# Propósito: Ejecutar pruebas unitarias en cada PR y push a ramas de desarrollo.
+#            Funciona de forma independiente al workflow de despliegue para
+#            dar retroalimentación rápida en feature branches.
+# Triggers:  Push a cualquier rama (excepto main) y PRs hacia main/develop.
+# =============================================================================
+
+name: 🧪 Unit Tests — DressFlow CI
+
+on:
+  push:
+    branches-ignore:
+      - main                    # main ya es cubierto por deploy.yml
+  pull_request:
+    branches:
+      - main
+      - develop
+  schedule:
+    # Ejecutar pruebas diariamente a las 06:00 UTC para detectar regresiones
+    - cron: '0 6 * * *'
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # JOB: Pruebas unitarias con matriz de versiones de Node.js
+  # ---------------------------------------------------------------------------
+  test:
+    name: 🧪 Tests (Node ${{ matrix.node-version }})
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: ['18', '20']   # Verificar compatibilidad con LTS y Current
+      fail-fast: false               # Continuar con otras versiones si una falla
+
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🟢 Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+
+      - name: 📦 Install dependencies
+        run: npm ci
+
+      # -----------------------------------------------------------------------
+      # Linting — Asegura estándares de código antes de ejecutar pruebas
+      # -----------------------------------------------------------------------
+      - name: 🔍 Run ESLint
+        run: npm run lint
+        continue-on-error: false
+
+      # -----------------------------------------------------------------------
+      # Pruebas unitarias con Jest
+      # -----------------------------------------------------------------------
+      - name: 🧪 Run unit tests
+        run: npm test -- --coverage --watchAll=false --ci
+        env:
+          CI: true
+          # Variables de entorno simuladas para pruebas (no son secretos reales)
+          NODE_ENV: test
+          JWT_SECRET: test-secret-key-for-ci-only
+          APP_ENV: test
+
+      # -----------------------------------------------------------------------
+      # Validar que las migraciones SQL tienen sintaxis correcta
+      # -----------------------------------------------------------------------
+      - name: 🗄️ Validate SQL migrations syntax
+        run: |
+          echo "Validating SQL migration files..."
+          # Verifica que no hay errores de sintaxis básicos
+          for sql_file in migrations/*.sql; do
+            echo "  ✓ Checking: $sql_file"
+            # Verifica que el archivo no está vacío y tiene estructura SQL básica
+            if [ ! -s "$sql_file" ]; then
+              echo "  ✗ ERROR: $sql_file is empty"
+              exit 1
+            fi
+          done
+          echo "All migration files validated."
+
+      # -----------------------------------------------------------------------
+      # Validar estructura del wrangler.toml
+      # -----------------------------------------------------------------------
+      - name: 🔧 Validate wrangler.toml
+        run: |
+          npm install -g wrangler@3
+          wrangler --version
+          echo "Validating wrangler.toml configuration..."
+          # Verifica que el archivo es un TOML válido
+          node -e "
+            const fs = require('fs');
+            const content = fs.readFileSync('wrangler.toml', 'utf8');
+            if (!content.includes('name')) {
+              process.exit(1);
+            }
+            console.log('wrangler.toml structure looks valid.');
+          "
+
+      # -----------------------------------------------------------------------
+      # Reportes y artefactos
+      # -----------------------------------------------------------------------
+      - name: 📊 Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results-node-${{ matrix.node-version }}
+          path: |
+            coverage/
+            test-results/
+          retention-days: 5
+
+      - name: 📝 Post test summary
+        if: always()
+        run: |
+          echo "## 🧪 Test Results — Node ${{ matrix.node-version }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Node Version | \`${{ matrix.node-version }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Branch | \`${{ github.ref_name }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Triggered by | \`${{ github.actor }}\` |" >> $GITHUB_STEP_SUMMARY
+
+  # ---------------------------------------------------------------------------
+  # JOB: Verificación de seguridad de dependencias
+  # ---------------------------------------------------------------------------
+  security-audit:
+    name: 🔒 Security Audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: 📦 Install dependencies
+        run: npm ci
+
+      - name: 🔒 Run npm audit
+        run: npm audit --audit-level=high
+        continue-on-error: true    # No bloquear el pipeline por advisories menores

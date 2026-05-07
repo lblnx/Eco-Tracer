@@ -1,0 +1,171 @@
+# =============================================================================
+# DressFlow — Docker Compose
+# Archivo: .docker/docker-compose.yml
+#
+# Propósito: Orquestar servicios para desarrollo local y pruebas.
+#            Simula el stack completo de Cloudflare (Pages + D1) localmente.
+#
+# Servicios:
+#   - app       → Servidor de desarrollo (Wrangler dev server / Miniflare)
+#   - test      → Ejecutor de pruebas unitarias con Jest
+#   - migrate   → Aplicar migraciones a la base de datos D1 local
+#
+# Uso:
+#   Desarrollo:  docker compose up app
+#   Pruebas:     docker compose run --rm test
+#   Migraciones: docker compose run --rm migrate
+#   Todo:        docker compose up
+# =============================================================================
+
+version: '3.9'
+
+# ── Variables globales reutilizables ─────────────────────────────────────────
+x-common-env: &common-env
+  NODE_ENV: development
+  APP_NAME: DressFlow
+  APP_VERSION: '1.0.0'
+  # JWT Secret local (nunca usar valores reales aquí, usar .env para producción)
+  JWT_SECRET: ${JWT_SECRET:-dressflow-local-dev-secret-change-in-prod}
+  # Configuración de Cloudflare (se lee desde .env para valores reales)
+  CLOUDFLARE_ACCOUNT_ID: ${CLOUDFLARE_ACCOUNT_ID:-}
+  CLOUDFLARE_API_TOKEN: ${CLOUDFLARE_API_TOKEN:-}
+
+x-build-config: &build-config
+  context: ..          # Raíz del proyecto (un nivel arriba de .docker/)
+  dockerfile: .docker/Dockerfile
+
+services:
+  # ── Servicio Principal: Servidor de desarrollo ──────────────────────────────
+  app:
+    container_name: dressflow-app
+    build:
+      <<: *build-config
+      target: dev        # Usa la etapa 'dev' del Dockerfile multi-etapa
+    ports:
+      - "8787:8787"      # Puerto de Wrangler dev server → acceso local
+    environment:
+      <<: *common-env
+      NODE_ENV: development
+      PORT: 8787
+    volumes:
+      # Hot-reload: sincronizar código fuente sin reconstruir la imagen
+      - ../src:/app/src:ro              # Solo lectura para seguridad
+      - ../wrangler.toml:/app/wrangler.toml:ro
+      - ../migrations:/app/migrations:ro
+      # Persistir la base de datos D1 local entre reinicios del contenedor
+      - dressflow-d1-data:/app/.wrangler/state
+      # Cache de npm para acelerar reinstalaciones
+      - npm-cache:/root/.npm
+    networks:
+      - dressflow-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8787/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    # Limitar recursos para simular el entorno restrictivo de Workers
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '1.0'
+
+  # ── Servicio de Pruebas: Ejecutar Jest ────────────────────────────────────
+  test:
+    container_name: dressflow-test
+    build:
+      <<: *build-config
+      target: test       # Usa la etapa 'test' del Dockerfile multi-etapa
+    environment:
+      <<: *common-env
+      NODE_ENV: test
+      CI: 'true'
+      JWT_SECRET: test-secret-key-jest-only
+    volumes:
+      # Sincronizar código para que los tests reflejen cambios locales
+      - ../src:/app/src:ro
+      - ../migrations:/app/migrations:ro
+      - ../package.json:/app/package.json:ro
+      # Carpeta de resultados de pruebas accesible desde el host
+      - ../coverage:/app/coverage
+    networks:
+      - dressflow-network
+    # No reiniciar automáticamente — se ejecuta una sola vez
+    restart: no
+    profiles:
+      - test             # Solo se activa con: docker compose --profile test up
+
+  # ── Servicio de Migraciones: Aplicar esquema D1 localmente ────────────────
+  migrate:
+    container_name: dressflow-migrate
+    build:
+      <<: *build-config
+      target: dependencies
+    command: >
+      sh -c "
+        echo '📦 Applying D1 migrations locally...';
+        wrangler d1 migrations apply dressflow-db --local &&
+        echo '✅ Migrations applied successfully!'
+      "
+    environment:
+      <<: *common-env
+    volumes:
+      - ../migrations:/app/migrations:ro
+      - ../wrangler.toml:/app/wrangler.toml:ro
+      - dressflow-d1-data:/app/.wrangler/state
+    networks:
+      - dressflow-network
+    restart: no
+    profiles:
+      - migrate          # Solo se activa con: docker compose --profile migrate up
+
+  # ── Servicio de Seed: Poblar datos de prueba ──────────────────────────────
+  seed:
+    container_name: dressflow-seed
+    build:
+      <<: *build-config
+      target: dependencies
+    command: >
+      sh -c "
+        echo '🌱 Seeding database with test data...';
+        wrangler d1 execute dressflow-db --local --command=\"
+          INSERT OR IGNORE INTO users (id, email, password_hash, name, role)
+          VALUES
+            ('usr_admin_001', 'admin@dressflow.com', 'hashed_admin_pass', 'Administrador', 'Admin'),
+            ('usr_mgr_001', 'gerente@dressflow.com', 'hashed_mgr_pass', 'Gerente General', 'Gerente'),
+            ('usr_sales_001', 'ventas@dressflow.com', 'hashed_sales_pass', 'Vendedor Principal', 'Ventas');
+        \" &&
+        echo '✅ Seed data inserted!'
+      "
+    environment:
+      <<: *common-env
+    volumes:
+      - ../wrangler.toml:/app/wrangler.toml:ro
+      - dressflow-d1-data:/app/.wrangler/state
+    networks:
+      - dressflow-network
+    restart: no
+    depends_on:
+      - migrate
+    profiles:
+      - seed             # Solo se activa con: docker compose --profile seed up
+
+# ── Volúmenes persistentes ─────────────────────────────────────────────────
+volumes:
+  # Almacena el estado de la base de datos D1 local de Wrangler
+  dressflow-d1-data:
+    driver: local
+    name: dressflow_d1_data
+
+  # Cache de npm compartido entre servicios para builds más rápidos
+  npm-cache:
+    driver: local
+    name: dressflow_npm_cache
+
+# ── Red interna del proyecto ──────────────────────────────────────────────
+networks:
+  dressflow-network:
+    driver: bridge
+    name: dressflow_network
