@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  backend:
+    build: 
+      context: ./ecotracker-backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./ecotracker-backend/src:/app/src
+    environment:
+      - FLASK_ENV=development
+
+  frontend:
+    build:
+      context: ./ecotracker-frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
