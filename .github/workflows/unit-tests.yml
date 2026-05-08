@@ -1,25 +1,15 @@
-# =============================================================================
-# DressFlow — Workflow de Integración Continua (CI) — Pruebas Unitarias
-# Archivo: .github/workflows/unit-tests.yml
-#
-# Propósito: Ejecutar pruebas unitarias en cada PR y push a ramas de desarrollo.
-#            Funciona de forma independiente al workflow de despliegue para
-#            dar retroalimentación rápida en feature branches.
-# Triggers:  Push a cualquier rama (excepto main) y PRs hacia main/develop.
-# =============================================================================
-
 name: 🧪 Unit Tests — DressFlow CI
 
 on:
   push:
     branches-ignore:
-      - main                    # main ya es cubierto por deploy.yml
+      - main                    
   pull_request:
     branches:
       - main
       - develop
   schedule:
-    # Ejecutar pruebas diariamente a las 06:00 UTC para detectar regresiones
+   
     - cron: '0 6 * * *'
 
 env:
@@ -39,16 +29,16 @@ jobs:
       fail-fast: false               # Continuar con otras versiones si una falla
 
     steps:
-      - name: 📥 Checkout repository
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: 🟢 Setup Node.js ${{ matrix.node-version }}
+      - name: Setup Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
           cache: 'npm'
 
-      - name: 📦 Install dependencies
+      - name: Install dependencies
         run: npm ci
 
       # -----------------------------------------------------------------------
