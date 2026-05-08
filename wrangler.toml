@@ -1,0 +1,77 @@
+# =============================================================================
+# DressFlow — Wrangler Configuration
+# Archivo: wrangler.toml
+#
+# Propósito: Configuración de Cloudflare Workers + Pages + D1 para DressFlow.
+# Documentación: https://developers.cloudflare.com/workers/wrangler/configuration
+# =============================================================================
+
+# ── Identificación del proyecto ───────────────────────────────────────────────
+name            = "dressflow"
+compatibility_date = "2024-09-23"   # Fecha de compatibilidad del runtime de Workers
+
+# Punto de entrada del Worker (lógica del servidor)
+main = "src/worker.js"
+
+# ── Configuración de Cloudflare Pages ─────────────────────────────────────────
+pages_build_output_dir = "src"      # Carpeta de archivos estáticos a desplegar
+
+# ── Base de datos D1 ──────────────────────────────────────────────────────────
+# Vincula la base de datos D1 al Worker.
+# El binding 'DB' hace que env.DB esté disponible en el Worker.
+[[d1_databases]]
+binding  = "DB"                     # Variable de acceso en código: env.DB
+database_name = "dressflow-db"      # Nombre de la DB en el dashboard de Cloudflare
+database_id   = "placeholder-replace-with-real-id"  # Reemplazar con: wrangler d1 create dressflow-db
+
+# ── Variables de entorno (no secretas) ────────────────────────────────────────
+# Secretos reales van en: wrangler secret put JWT_SECRET
+[vars]
+APP_NAME    = "DressFlow"
+APP_VERSION = "1.0.0"
+APP_ENV     = "production"
+ALLOWED_ORIGINS = "https://dressflow.pages.dev"
+
+# ── Configuración del entorno de desarrollo local ─────────────────────────────
+[env.development]
+name = "dressflow-dev"
+
+[env.development.vars]
+APP_ENV         = "development"
+ALLOWED_ORIGINS = "http://localhost:8787,http://localhost:3000"
+
+[[env.development.d1_databases]]
+binding       = "DB"
+database_name = "dressflow-db"
+database_id   = "placeholder-replace-with-real-id"
+
+# ── Configuración del entorno de staging ──────────────────────────────────────
+[env.staging]
+name = "dressflow-staging"
+
+[env.staging.vars]
+APP_ENV = "staging"
+
+[[env.staging.d1_databases]]
+binding       = "DB"
+database_name = "dressflow-db-staging"
+database_id   = "placeholder-staging-id"
+
+# ── Reglas de enrutamiento para el Worker ─────────────────────────────────────
+# El Worker maneja las rutas /api/* y deja que Pages sirva el resto
+[[rules]]
+type    = "Text"
+globs   = ["**/*.html", "**/*.css", "**/*.js"]
+fallthrough = true
+
+# ── Límites y configuración del runtime ───────────────────────────────────────
+[limits]
+cpu_ms = 50       # Límite de CPU por request (ms) — gratuito: 10ms, paid: 50ms
+
+# ── Configuración de migraciones D1 ───────────────────────────────────────────
+[migrations]
+migrations_dir = "migrations"       # Carpeta donde están los archivos .sql
+
+# ── Observabilidad ────────────────────────────────────────────────────────────
+[observability]
+enabled = true                      # Activa Workers Logs en el dashboard
