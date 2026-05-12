@@ -1,0 +1,11 @@
+name = "ecotracker-backend"
+main = "src/index.py"
+compatibility_date = "2024-03-20"
+compatibility_flags = ["python_workers"]
+
+# Configuración de la base de datos D1
+[[d1_databases]]
+binding = "DB"
+database_name = "ecotracker-db"
+# Este ID te lo dará Terraform después de crearlo, debes pegarlo aquí:
+database_id = "TU_DATABASE_ID_AQUI"
