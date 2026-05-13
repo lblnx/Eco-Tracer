@@ -4,16 +4,17 @@ except ImportError:
     class Response:
         @staticmethod
         def new(body, status=200, headers=None):
-            return {
-                "body": body,
-                "status": status,
-                "headers": headers or {}
-            }
+            return {"body": body, "status": status, "headers": headers or {}}
 
 import json
+import sentry_sdk
+
+sentry_sdk.init(
+    dsn="https://5373633946fc1f19d1080a14fa2efa18@o4511272694710272.ingest.us.sentry.io/4511380383137792",
+    traces_sample_rate=1.0,
+)
 
 async def on_fetch(request, env):
-    # 1. Definimos los headers CORS base para TODAS las respuestas
     cors_headers = {
         "Content-Type": "application/json",
         "Access-Control-Allow-Origin": "*",
@@ -22,27 +23,24 @@ async def on_fetch(request, env):
     }
 
     try:
-        # APM: Traza de solicitud
         print(f"APM [INFO]: Request recibida: {request.method} {request.url}")
 
-        # 2. Manejo del Preflight de CORS (CRÍTICO para que el navegador no bloquee)
         if request.method == "OPTIONS":
             return Response.new("OK", status=200, headers=cors_headers)
 
         if request.method == "GET":
-            # Respuesta exitosa
             data = {"mensaje": "API EcoTracker funcionando en el Edge", "status": "ok"}
             return Response.new(json.dumps(data), status=200, headers=cors_headers)
         
         if request.method == "POST":
-            # APM: Simulación de error crítico para la presentación
+            # Esto detonará nuestra excepción a propósito para la presentación
             raise Exception("Fallo de conexión simulado con D1 Database")
 
-        # Si mandan otro método (PUT, DELETE, etc)
         return Response.new(json.dumps({"error": "Method Not Allowed"}), status=405, headers=cors_headers)
 
     except Exception as e:
-        # APM: Registro de error en consola
+        sentry_sdk.capture_exception(e)
+        
         print(f"APM [ERROR]: {str(e)}")
         return Response.new(
             json.dumps({"error": str(e)}), 
