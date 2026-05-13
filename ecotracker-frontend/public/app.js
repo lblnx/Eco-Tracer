@@ -1,4 +1,4 @@
-const BACKEND_URL = "http://localhost:8000"; 
+const BACKEND_URL = "http://ecotracker-backend-production.pabloquint-2002.workers.dev"; 
 
 async function testAPI() {
     const resDiv = document.getElementById('resultado');
