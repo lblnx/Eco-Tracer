@@ -21,7 +21,7 @@ jobs:
       - name: Install dependencies
         run: |
           cd ecotracker-backend
-          pip install -r requirements.txt
+          pip install pytest
 
       - name: Run Unit Tests
         run: |
