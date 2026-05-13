@@ -1,0 +1,8 @@
+name = "ecotracker-frontend"
+pages_build_output_dir = "public"
+compatibility_date = "2024-03-20"
+[env.dev]
+name = "ecotracker-frontend-dev"
+
+[env.production]
+name = "ecotracker-frontend"
