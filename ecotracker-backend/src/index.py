@@ -7,12 +7,6 @@ except ImportError:
             return {"body": body, "status": status, "headers": headers or {}}
 
 import json
-import sentry_sdk
-
-sentry_sdk.init(
-    dsn="https://5373633946fc1f19d1080a14fa2efa18@o4511272694710272.ingest.us.sentry.io/4511380383137792",
-    traces_sample_rate=1.0,
-)
 
 async def on_fetch(request, env):
     cors_headers = {
@@ -39,8 +33,7 @@ async def on_fetch(request, env):
         return Response.new(json.dumps({"error": "Method Not Allowed"}), status=405, headers=cors_headers)
 
     except Exception as e:
-        sentry_sdk.capture_exception(e)
-        
+          
         print(f"APM [ERROR]: {str(e)}")
         return Response.new(
             json.dumps({"error": str(e)}), 
