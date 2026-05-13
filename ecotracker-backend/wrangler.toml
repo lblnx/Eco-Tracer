@@ -8,4 +8,4 @@ compatibility_flags = ["python_workers"]
 binding = "DB"
 database_name = "ecotracker-db"
 # Este ID te lo dará Terraform después de crearlo, debes pegarlo aquí:
-database_id = "TU_DATABASE_ID_AQUI"
+database_id = "85a2c830-4394-4402-8f6e-1d94541bdd38"
