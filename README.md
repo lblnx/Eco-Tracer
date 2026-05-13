@@ -1,5 +1,7 @@
 # 🍃 EcoTracker
 
+Sarah Martínez y Pablo Quintero
+
 ![CI/CD Backend](https://img.shields.io/badge/CI%2FCD-Backend-success?style=for-the-badge&logo=githubactions)
 ![CI/CD Frontend](https://img.shields.io/badge/CI%2FCD-Frontend-success?style=for-the-badge&logo=githubactions)
 ![Cloudflare](https://img.shields.io/badge/Deployed_on-Cloudflare-F38020?style=for-the-badge&logo=cloudflare)
