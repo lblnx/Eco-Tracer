@@ -1,0 +1,5 @@
+body { font-family: Arial, sans-serif; background-color: #f4f4f9; padding: 20px; }
+.container { max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+button { padding: 10px 15px; border: none; background: #28a745; color: white; cursor: pointer; border-radius: 4px; }
+button.btn-error { background: #dc3545; }
+pre { background: #333; color: #fff; padding: 10px; border-radius: 4px; overflow-x: auto; }

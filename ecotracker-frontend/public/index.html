@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>EcoTracker</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>EcoTracker 🍃</h1>
+        <p>Monitoreo de especies bioindicadoras.</p>
+        
+        <div class="card">
+            <h3>Probar Conexión Backend</h3>
+            <button onclick="testAPI()">Llamar API (GET)</button>
+            <button class="btn-error" onclick="testError()">Simular Error (POST)</button>
+            <pre id="resultado">Esperando acción...</pre>
+        </div>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>
