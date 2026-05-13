@@ -13,32 +13,39 @@ except ImportError:
 import json
 
 async def on_fetch(request, env):
+    # 1. Definimos los headers CORS base para TODAS las respuestas
+    cors_headers = {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type"
+    }
+
     try:
-        # 1. APM: Traza de solicitud (Aparecerá en los Logs de Cloudflare)
+        # APM: Traza de solicitud
         print(f"APM [INFO]: Request recibida: {request.method} {request.url}")
 
+        # 2. Manejo del Preflight de CORS (CRÍTICO para que el navegador no bloquee)
+        if request.method == "OPTIONS":
+            return Response.new("OK", status=200, headers=cors_headers)
+
         if request.method == "GET":
-            # Respuesta exitosa para mostrar que el API funciona
+            # Respuesta exitosa
             data = {"mensaje": "API EcoTracker funcionando en el Edge", "status": "ok"}
-            return Response.new(
-                json.dumps(data), 
-                headers={
-                    "Content-Type": "application/json",
-                    "Access-Control-Allow-Origin": "*"
-                }
-            )
+            return Response.new(json.dumps(data), status=200, headers=cors_headers)
         
         if request.method == "POST":
-            # 2. APM: Simulación de error crítico para la presentación
+            # APM: Simulación de error crítico para la presentación
             raise Exception("Fallo de conexión simulado con D1 Database")
 
-        return Response.new("Method Not Allowed", status=405)
+        # Si mandan otro método (PUT, DELETE, etc)
+        return Response.new(json.dumps({"error": "Method Not Allowed"}), status=405, headers=cors_headers)
 
     except Exception as e:
-        # 3. APM: Registro de error en consola
+        # APM: Registro de error en consola
         print(f"APM [ERROR]: {str(e)}")
         return Response.new(
             json.dumps({"error": str(e)}), 
             status=500, 
-            headers={"Content-Type": "application/json", "Access-Control-Allow-Origin": "*"}
+            headers=cors_headers
         )
